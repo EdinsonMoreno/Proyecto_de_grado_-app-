@@ -1,11 +1,14 @@
 from fastapi import FastAPI, WebSocket, HTTPException, Depends
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, Float, String, Date, Time, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from pydantic import BaseModel
 import datetime
 import asyncio
+import csv
+from io import StringIO
 
 # Configuración de la base de datos SQLite
 DATABASE_URL = "sqlite:///./piranometro.db"
@@ -34,8 +37,8 @@ Base.metadata.create_all(bind=engine)
 # Inicializar la aplicación FastAPI
 app = FastAPI()
 
-# Configuración de CORS para permitir el acceso desde el frontend en React
-origins = ["http://localhost:5000"]
+# Configuración de CORS para permitir el acceso desde el frontend
+origins = ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -51,6 +54,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Modelo de entrada para validación de datos
+class SolarDataInput(BaseModel):
+    solar_radiation: float
+    energy_received: float
 
 # WebSocket para transmisión de datos en tiempo real
 connected_clients = []
@@ -76,24 +84,20 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # Endpoint para recibir y almacenar datos del piranómetro
 @app.post("/data/")
-async def receive_data(
-    solar_radiation: float,
-    energy_received: float,
-    db: Session = Depends(get_db),
-):
+async def receive_data(data: SolarDataInput, db: Session = Depends(get_db)):
     try:
         # Cálculos previos
-        peak_radiation = solar_radiation  # Ejemplo: se puede ajustar según los datos
+        peak_radiation = data.solar_radiation  # Ejemplo: se puede ajustar según los datos
         max_radiation_hour = str(datetime.datetime.now().time())
         min_radiation_hour = str(datetime.datetime.now().time())
-        daily_avg_radiation = solar_radiation  # Simulación
-        monthly_avg_radiation = solar_radiation  # Simulación
-        yearly_avg_radiation = solar_radiation  # Simulación
+        daily_avg_radiation = data.solar_radiation  # Simulación
+        monthly_avg_radiation = data.solar_radiation  # Simulación
+        yearly_avg_radiation = data.solar_radiation  # Simulación
 
         # Crear registro en la base de datos
         solar_data = SolarData(
-            solar_radiation=solar_radiation,
-            energy_received=energy_received,
+            solar_radiation=data.solar_radiation,
+            energy_received=data.energy_received,
             peak_radiation=peak_radiation,
             max_radiation_hour=max_radiation_hour,
             min_radiation_hour=min_radiation_hour,
@@ -130,6 +134,21 @@ async def get_average(period: str, db: Session = Depends(get_db)):
         else:
             raise HTTPException(status_code=400, detail="Periodo no válido.")
         return {"period": period, "average_radiation": avg}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Endpoint para exportar datos en formato CSV
+@app.get("/data/export/")
+async def export_data(db: Session = Depends(get_db)):
+    try:
+        data = db.query(SolarData).all()
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["id", "date", "time", "solar_radiation", "energy_received", "peak_radiation", "max_radiation_hour", "min_radiation_hour", "daily_avg_radiation", "monthly_avg_radiation", "yearly_avg_radiation"])
+        for row in data:
+            writer.writerow([row.id, row.date, row.time, row.solar_radiation, row.energy_received, row.peak_radiation, row.max_radiation_hour, row.min_radiation_hour, row.daily_avg_radiation, row.monthly_avg_radiation, row.yearly_avg_radiation])
+        output.seek(0)
+        return StreamingResponse(output, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=solar_data.csv"})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
