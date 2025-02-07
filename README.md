@@ -208,5 +208,5 @@ Asegúrate de tener el frontend configurado para conectarse a estos endpoints.
 Contacto
 Si tienes alguna pregunta o necesitas ayuda adicional, no dudes en contactarme a cubelogicdesign@gmail.com 
 O en nuestra pagina web 
-[text](https://cubelogic-creations-48777850.hubspotpagebuilder.com/es/)
+https://cubelogic-creations-48777850.hubspotpagebuilder.com/es/
 
