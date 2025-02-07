@@ -35,7 +35,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 # Configuración de CORS para permitir el acceso desde el frontend en React
-origins = ["http://localhost:3000"]
+origins = ["http://localhost:5000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
