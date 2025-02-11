@@ -1,0 +1,5 @@
+chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://repositorio.uniandes.edu.co/server/api/core/bitstreams/ff75b5e1-40fb-4783-ae95-e54e5643e339/content
+
+COMO CITAR 
+
+Herrera Jiménez, A.  (2023).  Análisis y predicción de radiación en sistemas fotovoltaicos haciendo uso de machine learning.    Universidad de los Andes.  Disponible en: http://hdl.handle.net/1992/68882

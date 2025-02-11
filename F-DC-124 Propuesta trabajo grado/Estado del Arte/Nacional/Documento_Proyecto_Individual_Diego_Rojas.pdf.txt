@@ -1,0 +1,47 @@
+chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/https://repositorio.uniandes.edu.co/server/api/core/bitstreams/770ffb19-053a-4927-8234-0c0fcd8ede76/content
+
+COMO CITAR
+URI
+http://hdl.handle.net/1992/68323
+Autores
+Rojas Sánchez, Diego Alejandro
+
+
+Director
+González Mancera, Andrés Leónardo
+
+
+Fecha
+2023-05-24
+Resumen
+Este proyecto se desarrolla en busca de la implementación de métodos de forecasting de la radiación solar sobre el edificio Santo Domingo de la Universidad de los Andes basado en datos históricos registrados por la planta solar de este edificio. Por ello, se usaron métodos de estadísticos como la Media móvil integrada autorregresiva (ARIMA), la Suavización exponencial y el modelo heteroscedástico condicional autorregresivo (ARCH). Así mismo, se usaron modelos de machine learning para el forecasting de la radiación solar a partir de redes neuronales artificiales. De esta manera, generar una comparación de la calidad de cada uno de los modelos y observar sus posibles aplicaciones en el campo de la predicción meteorológica.
+
+Palabras claves
+Machine learning
+Buscar en Google
+
+Redes neuronales
+Buscar en Google
+
+Forecasting
+Buscar en Google
+
+ARIMA
+Buscar en Google
+
+ARCH
+Buscar en Google
+
+Suavización exponencial
+Buscar en Google
+
+Radiación solar
+Buscar en Google
+
+Históricos
+Buscar en Google
+
+Tipo de Contenido
+Trabajo de grado - Pregrado
+Colecciones
+Tesis/Trabajos de Grado1881
