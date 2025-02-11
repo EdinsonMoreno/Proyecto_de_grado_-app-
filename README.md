@@ -10,7 +10,7 @@ Antes de comenzar, asegúrate de tener instalados los siguientes programas:
   
 - **Node.js** (versión 16 o superior) - [Descargar aquí](https://nodejs.org/)  
 - **Python** (versión 3.8 o superior) - [Descargar aquí](https://www.python.org/)  
-- **Git** (opcional, para clonar el repositorio) - [Descargar aquí](https://github.com/EdinsonMoreno/Proyecto_de_grado_-app-.git)  
+- **Git** (opcional, para clonar el repositorio) - [Descargar aquí](https://git-scm.com/downloads)  
   
 ---  
   
