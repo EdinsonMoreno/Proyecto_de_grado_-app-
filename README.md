@@ -29,7 +29,6 @@ El proyecto está dividido en dos partes principales:
   
 Navega a la carpeta del backend:  
   
-```bash  
 cd Backend  
 
 Instala las dependencias necesarias utilizando `pip`:
@@ -132,7 +131,7 @@ El frontend estará disponible en: [http://localhost:3000](http://localhost:3000
 
 ## **Contacto**
 
-Si tienes preguntas o necesitas ayuda, no dudes en contactarme.
+Si tienes preguntas o necesitas ayuda, no dudes en contactarme. [Web](https://cubelogic-creations-48777850.hubspotpagebuilder.com/es/)
 
 ¡Gracias por usar SolarSense!
 
