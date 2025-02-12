@@ -1,5 +1,4 @@
-#include <PID_v1.h>    // Librería PID de Brett Beauregard: https://playground.arduino.cc/Code/PIDLibrary
-
+#include <PID_v1_bc.h>
 // ********************************************** I/O **********************************************************************
 const byte    encA = 2;              // Entrada de la señal A del encoder.
 const byte    encB = 3;              // Entrada de la señal B del encoder.
@@ -10,11 +9,7 @@ const byte    dirPinRot = 8;   // Pin de dirección para el motor de rotación
 const byte    stepPinElev = 9; // Pin de paso para el motor de elevación
 const byte    dirPinElev = 10; // Pin de dirección para el motor de elevación
 const byte    sensorPin = A0;  // Pin analógico para el sensor piranómetro
-const byte    stepPinRot = 7;  // Pin de paso para el motor de rotación
-const byte    dirPinRot = 8;   // Pin de dirección para el motor de rotación
-const byte    stepPinElev = 9; // Pin de paso para el motor de elevación
-const byte    dirPinElev = 10; // Pin de dirección para el motor de elevación
-const byte    sensorPin = A0;  // Pin analógico para el sensor piranómetro
+
 // ************************************************ Variables PID *****************************************************************
 double        Setpoint = 0.0, Input = 0.0, Output = 0.0;  // Setpoint=Posición designada; Input=Posición del motor; Output=Tensión de salida para el motor.
 double        kp = 0.0, ki = 0.0, kd = 0.0;               // Constante proporcional, integral y derivativa.
@@ -170,17 +165,6 @@ void imprimir(byte flag) // Imprime en el terminal serie los datos de las contan
   if ((flag == 1) || (flag == 3))
   {
     Serial.print("KP=");    Serial.print(kp);
-    Serial.print(" KI=");    Serial.print(ki);
-    Serial.print(" KD=");    Serial.print(kd);
-    Serial.print(" Time=");  Serial.println(tmp);
-  }
-}
-
-void imprimir(byte flag) // Imprime en el terminal serie los datos de las contantes PID, tiempo de muestreo y posición. En los demás casos sólo imprime la posición del motor.
-{
-  if ((flag == 1) || (flag == 3))
-  {
-    Serial.print("KP=");     Serial.print(kp);
     Serial.print(" KI=");    Serial.print(ki);
     Serial.print(" KD=");    Serial.print(kd);
     Serial.print(" Time=");  Serial.println(tmp);
