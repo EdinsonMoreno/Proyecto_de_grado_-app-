@@ -5,6 +5,16 @@ const byte    encA = 2;              // Entrada de la señal A del encoder.
 const byte    encB = 3;              // Entrada de la señal B del encoder.
 const byte    PWMA = 5;              // Salida PWM a la primera patilla del motor a través de un puente H.
 const byte    PWMB = 6;              // Salida PWM a la segunda patilla del motor a través de un puente H.
+const byte    stepPinRot = 7;  // Pin de paso para el motor de rotación
+const byte    dirPinRot = 8;   // Pin de dirección para el motor de rotación
+const byte    stepPinElev = 9; // Pin de paso para el motor de elevación
+const byte    dirPinElev = 10; // Pin de dirección para el motor de elevación
+const byte    sensorPin = A0;  // Pin analógico para el sensor piranómetro
+const byte    stepPinRot = 7;  // Pin de paso para el motor de rotación
+const byte    dirPinRot = 8;   // Pin de dirección para el motor de rotación
+const byte    stepPinElev = 9; // Pin de paso para el motor de elevación
+const byte    dirPinElev = 10; // Pin de dirección para el motor de elevación
+const byte    sensorPin = A0;  // Pin analógico para el sensor piranómetro
 // ************************************************ Variables PID *****************************************************************
 double        Setpoint = 0.0, Input = 0.0, Output = 0.0;  // Setpoint=Posición designada; Input=Posición del motor; Output=Tensión de salida para el motor.
 double        kp = 0.0, ki = 0.0, kd = 0.0;               // Constante proporcional, integral y derivativa.
@@ -33,6 +43,12 @@ void setup()                          // Configuramos los pines de entrada/salid
   attachInterrupt(digitalPinToInterrupt(encA), encoder, CHANGE); // En cualquier flanco ascendente o descendente
   attachInterrupt(digitalPinToInterrupt(encB), encoder, CHANGE); // en los pines 2 y 3, actúa la interrupción.
   
+  pinMode(stepPinRot, OUTPUT);
+  pinMode(dirPinRot, OUTPUT);
+  pinMode(stepPinElev, OUTPUT);
+  pinMode(dirPinElev, OUTPUT);
+  pinMode(sensorPin, INPUT);
+  
   outMax =  255.0;                    // Límite máximo del PWM.
   outMin = -outMax;                   // Límite mínimo del PWM.
   
@@ -53,85 +69,111 @@ void setup()                          // Configuramos los pines de entrada/salid
 
 void loop()
 {
+  // Leer valor del sensor piranómetro
+  int sensorValue = analogRead(sensorPin);
   
-//El valor de 3.711111111 sale entre la razón de 1336 pulsos y 360 grados, como una vuelta completa en el motor son 1336 pulsos del encoder,entonces en grados son 360
-//Y como el sistema funciona con base en los pulsos, por ejemplo, el calculo del error se realiza entre los pulsos requeridos por el setpoint menos los pulsos contados 
-//Se hace la divición de 1336/360 que da igual a 3.711111, entonces cuando se ingrese en el setpoint una posición en grados por ejemplo 180° este valor en el programa
-//se mulriplicará por 3.7111 para que puede hacer el calculo del error en pulsos.
- 
- Setpoint=Grados*3.7111111111111111111111111111111111111; //Es para ingresar valores de 0 a 360 grados como setpoint, asi cuando se le ingrese un valor a la variable grados desde el serialploter, el valor introducido se multiplicara por 3.71111 y hara la conversion de grados a pulsos que es lo que lee la variable contador para hacer el calculo del error.
- Respuesta=contador/3.711111111111111111111111111111111111; //En este caso el contador que seria la respuestas en forma de pulsos, sera divida por 3.71111, para que en la grafica de respuesta muestre grados en lugar de pulsos.
+  // Conversión grados-pulsos para PID
+  Setpoint = Grados * 3.7111111111111111111111111111111111111;
+  Respuesta = contador / 3.711111111111111111111111111111111111;
   
-  Input = (double)contador;           // Lectura del encoder óptico. El valor del contador se incrementa/decrementa a través de las interrupciones externas (pines 2 y 3).
+  Input = (double)contador;
   
-  while(!myPID.Compute());            // Mientras no se cumpla el tiempo de muestreo, se queda en este bucle.
+  while(!myPID.Compute());
 
-  // *********************************************** Control del Motor *************************************************
-  if (((long)Setpoint - contador) == 0)// Cuando está en el punto designado, parar el motor.
-  {
-    digitalWrite(PWMA, LOW);          // Pone a 0 los dos pines del puente en H.
-    digitalWrite(PWMB, LOW);
-    digitalWrite(ledok, HIGH);        // Se enciende el led (pin 13) para avisar visualmente que está en la posición designada.
+  // Control del Motor DC con PID
+  if (((long)Setpoint - contador) == 0) {
+    digitalWrite(PWMA, LOW);
+    digitalWrite(PWMB, LOW); 
+    digitalWrite(ledok, HIGH);
   }
-  else                                // En caso contrario hemos de ver si el motor ha de ir hacia delante o hacia atrás. Esto lo determina el signo de la variable "Output".
-  {
-    if (Output > 0.0)                 // Mueve el motor hacia delante con el PWM correspondiente a su posición.
-    {
-      digitalWrite(PWMB, LOW);        // Pone a 0 el segundo pin del puente en H.
-      analogWrite(PWMA, abs(Output)); // Por el primer pin sale la señal PWM.
+  else {
+    if (Output > 0.0) {
+      digitalWrite(PWMB, LOW);
+      analogWrite(PWMA, abs(Output));
     }
-    else                              // Mueve el motor hacia  atrás   con el PWM correspondiente a su posición.
-    {
-      digitalWrite(PWMA, LOW);        // Pone a 0 el primer pin del puente en H.
-      analogWrite(PWMB, abs(Output)); // Por el segundo pin sale la señal PWM.
+    else {
+      digitalWrite(PWMA, LOW);
+      analogWrite(PWMB, abs(Output));
     }
   }
   
-  // Recepción de datos para posicionar el motor, o modificar las constantes PID, o el tiempo de muestreo. Admite posiciones relativas y absolutas.
-  if (Serial.available() > 0)           // Comprueba si ha recibido algún dato por el terminal serie.
-  {
-    cmd = 0;                            // Por seguridad "limpiamos" cmd.
-    cmd = Serial.read();                // "cmd" guarda el byte recibido.
-    if (cmd > 31)
-    {
-      byte flags = 0;                                     // Borramos la bandera que decide lo que hay que imprimir.
-      if (cmd >  'Z') cmd -= 32;                          // Si una letra entra en minúscula la covierte en mayúscula.
+  // Procesamiento de comandos seriales
+  if (Serial.available() > 0) {
+    cmd = 0;
+    cmd = Serial.read();
+    if (cmd > 31) {
+      byte flags = 0;
+      if (cmd > 'Z') cmd -= 32;
       
-      // Decodificador para modificar las constantes PID.
-      switch(cmd)                                                                            // Si ponemos en el terminal serie, por ejemplo "p2.5 i0.5 d40" y pulsas enter  tomará esos valores y los cargará en kp, ki y kd.
-      {                                                                                      // También se puede poner individualmente, por ejemplo "p5.5", sólo cambiará el parámetro kp, los mismo si son de dos en dos.
-        case 'P': kp  = Serial.parseFloat(); myPID.SetTunings(kp, ki, kd); flags = 1; break; // Carga las constantes y presenta en el terminal serie los valores de las variables que hayan sido modificadas.
-        case 'I': ki  = Serial.parseFloat(); myPID.SetTunings(kp, ki, kd); flags = 1; break;
-        case 'D': kd  = Serial.parseFloat(); myPID.SetTunings(kp, ki, kd); flags = 1; break;
-        case 'T': tmp = Serial.parseInt();   myPID.SetSampleTime(tmp);     flags = 1; break;
-        case 'G': Grados = Serial.parseFloat();                            flags = 2; break;  // Esta línea permite introducir una posición absoluta. Ex: g180 (y luego enter) e irá a esa posición.
-        case 'K':                                                          flags = 3; break;  // Se puede introducir la letra k para poder observar en el serialploter los parametros de las constantes anteriores
+      switch(cmd) {
+        case 'P': kp = Serial.parseFloat(); myPID.SetTunings(kp, ki, kd); flags = 1; break;
+        case 'I': ki = Serial.parseFloat(); myPID.SetTunings(kp, ki, kd); flags = 1; break;
+        case 'D': kd = Serial.parseFloat(); myPID.SetTunings(kp, ki, kd); flags = 1; break;
+        case 'T': tmp = Serial.parseInt(); myPID.SetSampleTime(tmp); flags = 1; break;
+        case 'G': Grados = Serial.parseFloat(); flags = 2; break;
+        case 'K': flags = 3; break;
+        case 'R': // Control motor de rotación
+          int steps = Serial.parseInt();
+          int dir = steps > 0 ? HIGH : LOW;
+          controlMotor(stepPinRot, dirPinRot, abs(steps), dir);
+          break;
+        case 'E': // Control motor de elevación
+          steps = Serial.parseInt();
+          dir = steps > 0 ? HIGH : LOW;
+          controlMotor(stepPinElev, dirPinElev, abs(steps), dir);
+          break;
       }
-      digitalWrite(ledok, LOW);       // Cuando entra una posición nueva se apaga el led y no se volverá a encender hasta que el motor llegue a la posición que le hayamos designado.
+      digitalWrite(ledok, LOW);
       
-      imprimir(flags); 
+      imprimir(flags);
     }
   }
-Serial.print(Grados);
-Serial.print(" ");
-Serial.println(Respuesta);
 
+  // Enviar datos por serial
+  Serial.print(Grados);
+  Serial.print(" ");
+  Serial.print(Respuesta);
+  Serial.print(" ");
+  Serial.println(sensorValue);
 }
 // Encoder x4. Cuando se produzca cualquier cambio en el encoder esta parte hará que incremente o decremente el contador.
-void encoder()                        
+void encoder()    
 {
-    ant=act;                          // Guardamos el valor 'act' en 'ant' para convertirlo en pasado.
-    act=PIND & 12;                    // Guardamos en 'act' el valor que hay en ese instante en el encoder y hacemos un
-                                      // enmascaramiento para aislar los dos únicos bits que utilizamos para esta finalidad.
-    if(ant==12 && act==4)  contador++;// Incrementa el contador si el encoder se mueve hacia delante.
-    if(ant==4  && act==0)  contador++;
-    if(ant==0  && act==8)  contador++;
-    if(ant==8  && act==12) contador++;
-    
-    if(ant==4  && act==12) contador--;// Decrementa el contador si el encoder se mueve hacia atrás.
-    if(ant==0  && act==4)  contador--;
-    if(ant==8  && act==0)  contador--;
-    if(ant==12 && act==8)  contador--;
+  ant = act;    // Guardamos el valor 'act' en 'ant' para convertirlo en pasado.
+  act = PIND & 12;    // Guardamos en 'act' el valor que hay en ese instante en el encoder y hacemos un
+  // enmascaramiento para aislar los dos únicos bits que utilizamos para esta finalidad.
+  if (ant == 12 && act == 4) contador++; // Incrementa el contador si el encoder se mueve hacia delante.
+  if (ant == 4 && act == 0) contador++;
+  if (ant == 0 && act == 8) contador++;
+  if (ant == 8 && act == 12) contador++;
+  
+  if (ant == 4 && act == 12) contador--; // Decrementa el contador si el encoder se mueve hacia atrás.
+  if (ant == 0 && act == 4) contador--;
+  if (ant == 8 && act == 0) contador--;
+  if (ant == 12 && act == 8) contador--;
+}
+
+void controlMotor(byte stepPin, byte dirPin, int steps, int direction)
+{
+  digitalWrite(dirPin, direction);
+  for (int i = 0; i < steps; i++)
+  {
+    digitalWrite(stepPin, HIGH);
+    delayMicroseconds(1000);
+    digitalWrite(stepPin, LOW);
+    delayMicroseconds(1000);
+  }
+}
+
+void imprimir(byte flag) // Imprime en el terminal serie los datos de las contantes PID, tiempo de muestreo y posición. En los demás casos sólo imprime la posición del motor.
+{
+  if ((flag == 1) || (flag == 3))
+  {
+    Serial.print("KP=");    Serial.print(kp);
+    Serial.print(" KI=");    Serial.print(ki);
+    Serial.print(" KD=");    Serial.print(kd);
+    Serial.print(" Time=");  Serial.println(tmp);
+  }
 }
 
 void imprimir(byte flag) // Imprime en el terminal serie los datos de las contantes PID, tiempo de muestreo y posición. En los demás casos sólo imprime la posición del motor.
