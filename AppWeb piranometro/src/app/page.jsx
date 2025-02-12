@@ -1,40 +1,72 @@
 "use client";
 import React from "react";
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
+/**
+ * Componente principal que maneja toda la lógica y UI de la aplicación de monitoreo solar.
+ * Incluye funcionalidades para:
+ * - Monitoreo en tiempo real de radiación solar
+ * - Visualización de datos históricos
+ * - Diagnóstico del sistema
+ * - Gestión de ubicación
+ * - Contenido educativo
+ * 
+ * @returns {JSX.Element} Componente de la aplicación de monitoreo solar.
+ */
 function MainComponent() {
+  // Importación de hooks necesarios de React para manejo de estado y efectos
   const { useState, useEffect, useCallback, useMemo, useReducer } = React;
-  const [currentReading, setCurrentReading] = useState(0);
-  const [historicalData, setHistoricalData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  // Estados principales para el manejo de datos del sensor
+  const [currentReading, setCurrentReading] = useState(0); // Almacena la lectura actual del sensor en W/m²
+  const [historicalData, setHistoricalData] = useState([]); // Array de lecturas históricas
+  const [isLoading, setIsLoading] = useState(true); // Controla estados de carga
+  const [error, setError] = useState(null); // Manejo centralizado de errores
+  // Estado para monitorear la salud y conectividad del dispositivo
   const [deviceStatus, setDeviceStatus] = useState({
-    wifi: true,
-    sensor: true,
-    lastUpdate: new Date(),
+    wifi: true, // Indica si hay conexión WiFi activa
+    sensor: true, // Indica si el sensor está funcionando correctamente
+    lastUpdate: new Date(), // Timestamp de la última actualización recibida
   });
+
+  // Estado para gestionar la ubicación geográfica del dispositivo
   const [location, setLocation] = useState({
-    lat: 40.4168,
-    lng: -3.7038,
+    lat: 40.4168, // Latitud por defecto (Madrid)
+    lng: -3.7038, // Longitud por defecto (Madrid)
   });
+  
+  // Configuración y estado del gráfico de visualización de datos
   const [chartData, setChartData] = useState({
-    labels: [],
+    labels: [], // Etiquetas del eje X
     datasets: [
       {
-        data: [],
-        borderColor: "#10B981",
-        tension: 0.4,
-        fill: false,
+        data: [], // Datos para mostrar
+        borderColor: "#10B981", // Color de la línea
+        tension: 0.4, // Suavizado de la línea
+        fill: false, // Sin relleno bajo la línea
       },
     ],
   });
+
+  /**
+   * Verifica el estado de conexión del dispositivo.
+   * Simula la comprobación de conectividad WiFi y estado del sensor.
+   * Actualiza el estado del dispositivo y maneja errores.
+   * 
+   * @returns {Promise<void>}
+   */
   const checkConnection = useCallback(async () => {
     try {
+      // Simulación de estado de conexión
       const status = {
-        wifi: Math.random() > 0.5,
-        sensor: Math.random() > 0.5,
+        wifi: Math.random() > 0.5, // Simulación aleatoria de estado WiFi
+        sensor: Math.random() > 0.5, // Simulación aleatoria de estado del sensor
         lastUpdate: new Date(),
       };
       setDeviceStatus(status);
+      
+      // Lanza error si alguna conexión falla
       if (!status.wifi || !status.sensor) {
         throw new Error("Dispositivo desconectado");
       }
@@ -43,8 +75,17 @@ function MainComponent() {
       console.error("Error de conexión:", error);
     }
   }, []);
+
+  /**
+   * Maneja la exportación de datos históricos a formato CSV.
+   * Crea un enlace temporal para la descarga del archivo.
+   * Incluye manejo de errores durante el proceso de descarga.
+   * 
+   * @returns {void}
+   */
   const downloadCSV = useCallback(() => {
     try {
+      // Crea un elemento <a> para la descarga
       const link = document.createElement("a");
       link.href = "/api/export-data";
       link.download = `solar-data-${new Date().toISOString()}.csv`;
@@ -54,11 +95,25 @@ function MainComponent() {
       console.error("Error de descarga:", error);
     }
   }, []);
+
+  // Estado inicial para el reducer que maneja configuraciones globales
   const initialState = {
     darkMode: false,
     activeTab: "monitor",
     timeRange: "day",
   };
+
+  /**
+   * Reducer para manejar cambios en la configuración global.
+   * Gestiona:
+   * - Modo oscuro/claro
+   * - Pestañas activas
+   * - Rangos de tiempo para visualización
+   * 
+   * @param {Object} state - Estado actual.
+   * @param {Object} action - Acción a procesar.
+   * @returns {Object} Nuevo estado.
+   */
   function reducer(state, action) {
     switch (action.type) {
       case "SET_DARK_MODE":
@@ -71,8 +126,10 @@ function MainComponent() {
         return state;
     }
   }
+
   const [state, dispatch] = useReducer(reducer, initialState);
   const { darkMode, activeTab, timeRange } = state;
+
   const memoizedChartData = useMemo(() => {
     if (!historicalData.length) return chartData;
     return {
@@ -87,6 +144,17 @@ function MainComponent() {
       ],
     };
   }, [historicalData]);
+
+  /**
+   * Valida y normaliza las coordenadas geográficas.
+   * Asegura que los valores estén dentro de rangos válidos:
+   * - Latitud: -90 a 90
+   * - Longitud: -180 a 180
+   * 
+   * @param {number} lat - Latitud a validar.
+   * @param {number} lng - Longitud a validar.
+   * @returns {Object} Coordenadas validadas.
+   */
   const validateLocation = useCallback((lat, lng) => {
     const validLat = Number(lat);
     const validLng = Number(lng);
@@ -95,6 +163,7 @@ function MainComponent() {
       lng: isNaN(validLng) ? -3.7038 : Math.max(-180, Math.min(180, validLng)),
     };
   }, []);
+
   const [mapError, setMapError] = useState(null);
   const [mapInstance, setMapInstance] = useState(null);
   const [markerInstance, setMarkerInstance] = useState(null);
@@ -102,6 +171,13 @@ function MainComponent() {
   const [gptResponse, setGptResponse] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  /**
+   * Analiza el mapa actual usando GPT Vision.
+   * Captura una imagen del mapa y la envía a la API para análisis.
+   * Actualiza el estado con la respuesta del análisis.
+   * 
+   * @returns {Promise<void>}
+   */
   const analyzeMap = useCallback(async () => {
     setIsAnalyzing(true);
     try {
@@ -143,75 +219,76 @@ function MainComponent() {
     }
   }, []);
 
-  useEffect(() => {
-    if (activeTab === "location") {
-      const script = document.createElement("script");
-      script.id = "google-maps-script";
-      script.src =
-        "https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places";
-      script.async = true;
-      script.defer = true;
+  /**
+   * Effect para inicializar y gestionar el mapa de Google.
+   * Se ejecuta cuando:
+   * - Cambia la pestaña activa a 'location'
+   * - Cambia el modo oscuro/claro
+   * Configura el mapa, marcadores e info windows.
+   * 
+   * @returns {void}
+   */
 
-      script.onload = () => {
-        const map = new window.google.maps.Map(document.getElementById("map"), {
-          center: { lat: location.lat, lng: location.lng },
-          zoom: 8,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true,
-          gestureHandling: "cooperative",
-          styles: darkMode
-            ? [
-                { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-                {
-                  elementType: "labels.text.stroke",
-                  stylers: [{ color: "#242f3e" }],
-                },
-                {
-                  elementType: "labels.text.fill",
-                  stylers: [{ color: "#746855" }],
-                },
-              ]
-            : [],
-        });
-        const marker = new window.google.maps.Marker({
-          position: { lat: location.lat, lng: location.lng },
-          map: map,
-          draggable: true,
-          animation: window.google.maps.Animation.DROP,
-          title: "Ubicación del Panel Solar",
-        });
-        const infoWindow = new window.google.maps.InfoWindow({
-          content: "Arrastra el marcador para actualizar la ubicación",
-        });
 
-        marker.addListener("click", () => infoWindow.open(map, marker));
-        marker.addListener("dragend", () => {
-          const pos = marker.getPosition();
-          const validatedLocation = validateLocation(pos.lat(), pos.lng());
-          setLocation(validatedLocation);
-          infoWindow.setContent(
-            `Lat: ${validatedLocation.lat.toFixed(
-              6
-            )}, Lng: ${validatedLocation.lng.toFixed(6)}`
-          );
-        });
 
-        setMapInstance(map);
-        setMarkerInstance(marker);
-      };
+useEffect(() => {
+  if (activeTab === "location") {
+    // Inicializar el mapa de Leaflet
+    const map = L.map('map').setView([location.lat, location.lng], 13);
 
-      document.head.appendChild(script);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
 
-      return () => {
-        const script = document.getElementById("google-maps-script");
-        if (script) document.head.removeChild(script);
-        if (mapInstance) mapInstance.setMap(null);
-        if (markerInstance) markerInstance.setMap(null);
-      };
-    }
-  }, [activeTab, darkMode]);
+    // Crear un marcador arrastrable
+    const customIcon = L.icon({
+      iconUrl: 'AppWeb piranometro\src\public\mappointer_114502.ico', // ruta al icono
+      iconSize: [32, 32], // Tamaño del icono
+      iconAnchor: [16, 32], // Punto del icono que se ubicará en la posición del marcador
+      popupAnchor: [0, -32] // Punto desde el cual se abrirá el popup
+    });
+    const marker = L.marker([location.lat, location.lng], {
+      draggable: true,
+      icon: customIcon // Usa el icono personalizado
+    }).addTo(map);
 
+    // Crear una ventana de información
+    const infoWindow = L.popup().setContent("Arrastra el marcador para actualizar la ubicación");
+
+    // Mostrar la ventana de información al hacer clic en el marcador
+    marker.on('click', function () {
+      infoWindow.setLatLng(marker.getLatLng()).openOn(map);
+    });
+
+    // Evento para actualizar la ubicación al arrastrar el marcador
+    marker.on('dragend', function (e) {
+      const { lat, lng } = e.target.getLatLng();
+      const validatedLocation = validateLocation(lat, lng);
+      setLocation(validatedLocation);
+      infoWindow.setContent(`Lat: ${validatedLocation.lat.toFixed(6)}, Lng: ${validatedLocation.lng.toFixed(6)}`);
+    });
+
+    // Guardar instancias del mapa y marcador
+    setMapInstance(map);
+    setMarkerInstance(marker);
+
+    // Limpiar instancias al desmontar
+    return () => {
+      map.remove();
+    };
+  }
+}, [activeTab, location]);
+
+  /**
+   * Effect para actualizar la posición del marcador y centro del mapa.
+   * Se ejecuta cuando cambia:
+   * - La ubicación
+   * - La instancia del mapa
+   * - La instancia del marcador
+   * 
+   * @returns {void}
+   */
   useEffect(() => {
     if (mapInstance && markerInstance) {
       try {
@@ -686,9 +763,15 @@ function MainComponent() {
       </div>
       <style jsx global>{`
         @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-          100% { transform: scale(1); }
+          0% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          100% {
+            transform: scale(1);
+          }
         }
         .animate-pulse {
           animation: pulse 2s infinite;
