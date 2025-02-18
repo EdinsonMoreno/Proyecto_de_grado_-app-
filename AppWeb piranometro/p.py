@@ -1,4 +1,11 @@
+# Corregir la ruta y guardar el archivo `page.jsx`
+import os
 
+# Crear la carpeta si no existe
+os.makedirs("AppWeb piranometro/src/app", exist_ok=True)
+
+# Código actualizado para `page.jsx`
+page_code_updated = """
 import React, { useReducer } from "react";
 import Monitor from "../components/Monitor";
 import Location from "../components/Location";
@@ -45,3 +52,10 @@ const MainComponent = () => {
 };
 
 export default MainComponent;
+"""
+
+# Guardar el archivo actualizado
+with open("AppWeb piranometro/src/app/page.jsx", "w") as f:
+    f.write(page_code_updated)
+
+"Archivo `page.jsx` actualizado correctamente."
