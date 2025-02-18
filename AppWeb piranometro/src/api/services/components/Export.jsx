@@ -1,21 +1,30 @@
 
+"use client";
+
 import React from "react";
-import { exportData } from "../api/services/api";
+import { exportData } from "AppWeb piranometro\src\api\services\api.js";
 
 const Export = () => {
   const handleExport = async () => {
-    const blob = await exportData();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "solar-data.csv";
-    a.click();
+    try {
+      const blob = await exportData();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "solar-data.csv";
+      a.click();
+    } catch (error) {
+      console.error("Error al exportar los datos:", error);
+      alert("Hubo un error al exportar los datos. Por favor, intántalo de nuevo.");
+    }
   };
 
   return (
-    <div className="export">
-      <h2>Exportar Datos</h2>
-      <button onClick={handleExport}>Exportar CSV</button>
+    <div className="p-4 bg-gray-100">
+      <h2 className="text-lg font-bold">Exportar Datos</h2>
+      <button className="bg-blue-500 text-white px-4 py-2 rounded mt-4" onClick={handleExport}>
+        Exportar CSV
+      </button>
     </div>
   );
 };

@@ -1,4 +1,8 @@
+# Corregir el error importando el módulo `os` y optimizar el archivo page.jsx
+import os
 
+# Código optimizado para page.jsx
+page_code_optimized = """
 "use client";
 
 import React, { useReducer } from "react";
@@ -56,3 +60,13 @@ const MainComponent = () => {
 };
 
 export default MainComponent;
+"""
+
+# Crear la carpeta si no existe
+os.makedirs("AppWeb piranometro/src/app", exist_ok=True)
+
+# Guardar el archivo corregido
+with open("AppWeb piranometro/src/app/page.jsx", "w") as f:
+    f.write(page_code_optimized)
+
+"Archivo page.jsx corregido e integrado correctamente."
