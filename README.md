@@ -36,7 +36,7 @@ El sistema está compuesto por los siguientes componentes:
 
 ---
 
-## **Mejoras y Correcciones Implementadas**
+# **Próximas Mejoras y Correcciones **
 
 ### **Arduino**
 
