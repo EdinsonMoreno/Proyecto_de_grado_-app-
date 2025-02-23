@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { connectWebSocket, disconnectWebSocket } from "../api/services/websocket";
+import { connectWebSocket, disconnectWebSocket } from "../api/services/websocket.js";
 
 const Monitor = () => {
   const [currentReading, setCurrentReading] = useState(0);

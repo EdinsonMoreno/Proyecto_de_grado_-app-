@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { saveLocation, getLocation } from "../api/services/api";
+import { saveLocation, getLocation } from "../api/services/api.js";
 
 const Location = () => {
   const [location, setLocation] = useState({ lat: 0, lng: 0 });
