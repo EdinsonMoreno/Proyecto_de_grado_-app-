@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 function MainComponent() {
   const { useState, useEffect, useCallback, useMemo, useReducer } = React;
@@ -103,7 +104,15 @@ function MainComponent() {
   const [gptResponse, setGptResponse] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  const analyzeMap = useCallback(async () => {
+  // Define the custom icon
+  const customIcon = L.icon({
+  iconUrl: '/mappointer_114502.ico',
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -32]
+});
+
+const analyzeMap = useCallback(async () => {
     setIsAnalyzing(true);
     try {
       const mapElement = document.getElementById("map");
@@ -143,9 +152,11 @@ function MainComponent() {
       setIsAnalyzing(false);
     }
   }, []);
+  
 // Integra OpenStretMap con Leaflet 
 useEffect(() => {
   if (activeTab === "location") {
+    // Inicializar el mapa de Leaflet
     const map = L.map('map').setView([location.lat, location.lng], 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -153,20 +164,55 @@ useEffect(() => {
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    const marker = L.marker([location.lat, location.lng], { draggable: true }).addTo(map);
+    // Crear un marcador arrastrable
+    const marker = L.marker([location.lat, location.lng], { draggable: true, icon: customIcon }).addTo(map);
 
+    // Crear una ventana de información
+    const infoWindow = L.popup().setContent("Arrastra el marcador para actualizar la ubicación");
+
+    // Mostrar la ventana de información al hacer clic en el marcador
+    marker.on('click', function () {
+      infoWindow.setLatLng(marker.getLatLng()).openOn(map);
+    });
+
+    // Evento para actualizar la ubicación al arrastrar el marcador
     marker.on('dragend', function (e) {
       const { lat, lng } = e.target.getLatLng();
       const validatedLocation = validateLocation(lat, lng);
       setLocation(validatedLocation);
+      infoWindow.setContent(`Lat: ${validatedLocation.lat.toFixed(6)}, Lng: ${validatedLocation.lng.toFixed(6)}`);
     });
 
+    // Evento para posicionar el marcador al hacer clic en el mapa
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      const validatedLocation = validateLocation(lat, lng);
+      marker.setLatLng(validatedLocation);
+      setLocation(validatedLocation);
+      infoWindow.setContent(`Lat: ${validatedLocation.lat.toFixed(6)}, Lng: ${validatedLocation.lng.toFixed(6)}`);
+      infoWindow.setLatLng(validatedLocation).openOn(map);
+    });
+
+    // Evento para posicionar el marcador al hacer clic en el mapa
+    map.on('click', function (e) {
+      const { lat, lng } = e.latlng;
+      const validatedLocation = validateLocation(lat, lng);
+      marker.setLatLng(validatedLocation);
+      setLocation(validatedLocation);
+      infoWindow.setContent(`Lat: ${validatedLocation.lat.toFixed(6)}, Lng: ${validatedLocation.lng.toFixed(6)}`);
+      infoWindow.setLatLng(validatedLocation).openOn(map);
+    });
+
+    // Guardar instancias del mapa y marcador
     setMapInstance(map);
     setMarkerInstance(marker);
-  }
-}, [activeTab]);
 
-    
+    // Limpiar instancias al desmontar
+    return () => {
+      map.remove();
+    };
+  }
+}, [activeTab, location, customIcon]);
 
   useEffect(() => {
     if (mapInstance && markerInstance) {
@@ -178,7 +224,7 @@ useEffect(() => {
         setMapError("Error al actualizar la ubicación: " + error.message);
       }
     }
-  }, [location, mapInstance, markerInstance]);
+  }, [location, mapInstance, markerInstance, customIcon]);
 
   return (
     <div
