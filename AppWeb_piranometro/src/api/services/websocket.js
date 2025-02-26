@@ -21,9 +21,3 @@ export const connectWebSocket = (onMessage) => {
     console.log("WebSocket desconectado.");
   };
 };
-
-export const disconnectWebSocket = () => {
-  if (socket) {
-    socket.close();
-  }
-};

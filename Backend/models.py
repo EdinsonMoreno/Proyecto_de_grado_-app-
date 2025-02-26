@@ -1,4 +1,3 @@
-
 from sqlalchemy import Column, Integer, Float, String, Date, Time
 from sqlalchemy.ext.declarative import declarative_base
 import datetime
@@ -18,3 +17,4 @@ class SolarData(Base):
     daily_avg_radiation = Column(Float, nullable=False)
     monthly_avg_radiation = Column(Float, nullable=False)
     yearly_avg_radiation = Column(Float, nullable=False)
+
