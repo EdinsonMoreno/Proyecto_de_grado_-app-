@@ -1,0 +1,11 @@
+T2m: temperatura del aire a 2 m (grados Celsius)
+RH: humedad relativa (%)
+G(h): irradiancia global en el plano horizontal (W/m2)
+Gb(n): irradiancia directa/haz en un plano siempre normal a los rayos solares (W/m2)
+Gd(h): irradiancia difusa en el plano horizontal (W/m2)
+IR(h): irradiancia infrarroja (térmica) superficial en un plano horizontal (W/m2)
+WS10m: velocidad total del viento a 10 m (m/s)
+WD10m: dirección del viento a 10 m (0 = N, 90 = E) (grados)
+SP: presión (del aire) superficial (Pa)
+
+PVGIS (c)
