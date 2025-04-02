@@ -33,7 +33,7 @@ void setup()                          // Configuramos los pines de entrada/salid
   digitalWrite(PWMA, LOW);            // Y ambas salidas las inicializa a cero.
   digitalWrite(PWMB, LOW);
   
-  TCCR0B = TCCR0B & B11111000 | 1;  // Configuración de la frecuencia del PWM para los pines 5 y 6.
+ // TCCR0B = TCCR0B & B11111000 | 1;  // Configuración de la frecuencia del PWM para los pines 5 y 6.
                                      // Podemos variar la frecuencia del PWM con un número de 1 (32KHz) hasta 7 (32Hz). El número que pongamos es un divisor de frecuencia. Min.=7, Max.=1. Está a la máxima frecuencia y es como mejor resultado me ha dado y además es silencioso.
   attachInterrupt(digitalPinToInterrupt(encA), encoder, CHANGE); // En cualquier flanco ascendente o descendente
   attachInterrupt(digitalPinToInterrupt(encB), encoder, CHANGE); // en los pines 2 y 3, actúa la interrupción.
