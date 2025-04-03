@@ -1,4 +1,4 @@
-#include <PID_v1_bc>
+#include <PID_v1_bc.h>
 // ********************************************** I/O **********************************************************************
 const byte    encA = 2;              // Entrada de la señal A del encoder.
 const byte    encB = 3;              // Entrada de la señal B del encoder.
@@ -16,8 +16,8 @@ const float STEPS_PER_DEGREE_ELEV = 10.0; // Pasos por grado para el motor de el
 
 // ************************************************ Variables PID *****************************************************************
 double        S0, kd = 0.0;               // Constante proporcional, integral y derivativa.
-double        outMax = 0.0, etpoint = 0.0, Input = 0.0, Output = 0.0;  // Setpoint=Posición designada; Input=Posición del motor; Output=Tensión de salida para el motor.
-double        kp = 0.0, ki = 0.outMin = 0.0;                 // Límites para no sobrepasar la resolución del PWM.
+double        outMax = 0.0, Setpoint = 0.0, Input = 0.0, Output = 0.0;  // Setpoint=Posición designada; Input=Posición del motor; Output=Tensión de salida para el motor.
+double        kp = 0.0, ki = 0.0, outMin = 0.0;                 // Límites para no sobrepasar la resolución del PWM.
 double        Grados=0.0, Respuesta=0.0;
 // **************************************************** Otras Variables ***********************************************************
 volatile long contador = 0;           // En esta variable se guardará los pulsos del encoder y que interpreremos como ángulo
@@ -37,8 +37,15 @@ void setup()                          // Configuramos los pines de entrada/salid
   digitalWrite(PWMA, LOW);            // Y ambas salidas las inicializa a cero.
   digitalWrite(PWMB, LOW);
   
-  TCCR0B = TCCR0B & B11111000 | 1;  // Configuración de la frecuencia del PWM para los pines 5 y 6.
-                                     // Podemos variar la frecuencia del PWM con un número de 1 (32KHz) hasta 7 (32Hz). El número que pongamos es un divisor de frecuencia. Min.=7, Max.=1. Está a la máxima frecuencia y es como mejor resultado me ha dado y además es silencioso.
+  // Configuración de la frecuencia del PWM para los pines 5 y 6
+  // Configuramos Timer0 (pines 5 y 6)
+  TCCR0B = TCCR0B & B11111000 | B00000001; // Sin prescaler = 62.5 kHz
+  // Para frecuencias más bajas puedes usar:
+  // B00000010 -> prescaler 8 = 7.8 kHz
+  // B00000011 -> prescaler 64 = 976 Hz
+  // B00000100 -> prescaler 256 = 244 Hz
+  // B00000101 -> prescaler 1024 = 61 Hz
+  
   attachInterrupt(digitalPinToInterrupt(encA), encoder, CHANGE); // En cualquier flanco ascendente o descendente
   attachInterrupt(digitalPinToInterrupt(encB), encoder, CHANGE); // en los pines 2 y 3, actúa la interrupción.
   
@@ -111,28 +118,27 @@ void loop()
         case 'T': tmp = Serial.parseInt(); myPID.SetSampleTime(tmp); flags = 1; break;
         case 'G': Grados = Serial.parseFloat(); flags = 2; break;
         case 'K': flags = 3; break;
-        case 'R': // Control motor de rotación
-          int steps = Serial.parseInt();
-          int dir = steps > 0 ? HIGH : LOW;
-          controlMotor(stepPinRot, dirPinRot, abs(steps), dir);
-          break;
-        case 'E': // Control motor de elevación
-  	  float elevAngle = Serial.parseFloat(); // Leer ángulo en lugar de pasos
-  
-  	  // Limitar el ángulo entre -80 y 80 grados
-  	  if (elevAngle > MAX_ELEV_ANGLE) {
-	   elevAngle = MAX_ELEV_ANGLE;
-  	  } else if (elevAngle < MIN_ELEV_ANGLE) {
-    	   elevAngle = MIN_ELEV_ANGLE;
-  	  }
-  
-  	  // Convertir ángulo a pasos
-  	  int steps = (int)(elevAngle * STEPS_PER_DEGREE_ELEV);
- 	  int dir = steps > 0 ? HIGH : LOW;
-  
-  	  // Controlar el motor
- 	  controlMotor(stepPinElev, dirPinElev, abs(steps), dir);
-  	  break;
+        case 'R': { // Control motor de rotación
+            int steps = Serial.parseInt();
+            int dir = steps > 0 ? HIGH : LOW;
+            controlMotor(stepPinRot, dirPinRot, abs(steps), dir);
+            break;
+        }
+        case 'E': { // Control motor de elevación
+            float elevAngle = Serial.parseFloat();
+            
+            if (elevAngle > MAX_ELEV_ANGLE) {
+                elevAngle = MAX_ELEV_ANGLE;
+            } else if (elevAngle < MIN_ELEV_ANGLE) {
+                elevAngle = MIN_ELEV_ANGLE;
+            }
+            
+            int steps = (int)(elevAngle * STEPS_PER_DEGREE_ELEV);
+            int dir = steps > 0 ? HIGH : LOW;
+            
+            controlMotor(stepPinElev, dirPinElev, abs(steps), dir);
+            break;
+        }
       }
       digitalWrite(ledok, LOW);
       
@@ -150,39 +156,42 @@ void loop()
 // Encoder x4. Cuando se produzca cualquier cambio en el encoder esta parte hará que incremente o decremente el contador.
 void encoder()    
 {
-  ant = act;    // Guardamos el valor 'act' en 'ant' para convertirlo en pasado.
-  act = PIND & 12;    // Guardamos en 'act' el valor que hay en ese instante en el encoder y hacemos un
-  // enmascaramiento para aislar los dos únicos bits que utilizamos para esta finalidad.
-  if (ant == 12 && act == 4) contador++; // Incrementa el contador si el encoder se mueve hacia delante.
-  if (ant == 4 && act == 0) contador++;
-  if (ant == 0 && act == 8) contador++;
-  if (ant == 8 && act == 12) contador++;
-  
-  if (ant == 4 && act == 12) contador--; // Decrementa el contador si el encoder se mueve hacia atrás.
-  if (ant == 0 && act == 4) contador--;
-  if (ant == 8 && act == 0) contador--;
-  if (ant == 12 && act == 8) contador--;
+    ant = act;
+    // Leer directamente los pines en ESP8266
+    act = (digitalRead(encA) << 1) | digitalRead(encB);
+    
+    // Tabla de estados para el encoder
+    static const int8_t estados[] = {0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0};
+    static uint8_t indice = 0;
+    
+    indice = ((indice << 2) | act) & 0x0F;
+    contador += estados[indice];
 }
 
-void controlMotor(byte stepPin, byte dirPin, int steps, int direction)
-{
-  digitalWrite(dirPin, direction);
-  for (int i = 0; i < steps; i++)
-  {
-    digitalWrite(stepPin, HIGH);
-    delayMicroseconds(1000);
-    digitalWrite(stepPin, LOW);
-    delayMicroseconds(1000);
-  }
+void controlMotor(byte stepPin, byte dirPin, int steps, int direction) {
+    digitalWrite(dirPin, direction);
+    unsigned long stepDelay = 1000; // 1ms entre pasos
+    
+    for (int i = 0; i < steps; i++) {
+        digitalWrite(stepPin, HIGH);
+        delayMicroseconds(stepDelay);
+        digitalWrite(stepPin, LOW);
+        delayMicroseconds(stepDelay);
+        
+        // Permite que otros procesos se ejecuten
+        if (i % 100 == 0) {
+            // yield(); // Solo necesario para ESP8266, comentado para Arduino Uno
+        }
+    }
 }
 
 void imprimir(byte flag) // Imprime en el terminal serie los datos de las contantes PID, tiempo de muestreo y posición. En los demás casos sólo imprime la posición del motor.
 {
   if ((flag == 1) || (flag == 3))
   {
-    Serial.print("KP=");    Serial.print(kp);
-    Serial.print(" KI=");    Serial.print(ki);
-    Serial.print(" KD=");    Serial.print(kd);
-    Serial.print(" Time=");  Serial.println(tmp);
+    Serial.print(F("KP="));    Serial.print(kp);
+    Serial.print(F(" KI="));    Serial.print(ki);
+    Serial.print(F(" KD="));    Serial.print(kd);
+    Serial.print(F(" Time="));  Serial.println(tmp);
   }
 }
